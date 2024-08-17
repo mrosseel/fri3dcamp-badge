@@ -44,6 +44,10 @@ int keyBoardYOffset = 60;
 // beacuse the display is rotated
 int screen_width = TFT_HEIGHT;
 int screen_height = TFT_WIDTH;
+
+//STABILITY DELAY
+int stability_delay = 60;
+
 String name = "";
 int cellWidth = (screen_height / 2) / cols;
 int cellHeight = ((screen_width / 2)) / rows; // Reserve 40 pixels for the name display
@@ -51,6 +55,11 @@ int keyboardWidth = cols * cellWidth;
 // joystick state
 boolean joystick_engaged_x = false;
 boolean joystick_engaged_y = false;
+// Animation
+String animation = "invert"; // "upDown" or "invert"
+int animationY = 0;
+int animationDirection = 1;
+int animationSpeed = 1;
 
 void displayCenteredText(String text, int centerX, int centerY, int textSize, boolean maxSize = false)
 {
@@ -221,22 +230,27 @@ void handleJoystick()
 
     if (newx != 0 || newy != 0)
     {
-        removeHighlight(cursorX, cursorY);
         if (!joystick_engaged_x)
         {
+            removeHighlight(cursorX, cursorY);
             cursorX = constrain(cursorX + newx, 0, cols - 1);
             joystick_engaged_x = true;
+
+            highlightCursor(cursorX, cursorY);
         }
         if (!joystick_engaged_y)
         {
+            removeHighlight(cursorX, cursorY);
             cursorY = constrain(cursorY + newy, 0, rows - 1);
             joystick_engaged_y = true;
+
+            highlightCursor(cursorX, cursorY);
         }
         // cursorX = cursorX + newx;
         // cursorY = cursorY + newy;
         // cursorX = constrain(cursorX, 0, cols - 1);
         // cursorY = constrain(cursorY, 0, rows - 1);
-        highlightCursor(cursorX, cursorY);
+
     }
 }
 void drawGrid()
@@ -298,6 +312,70 @@ void checkButton(Button *b, const char *buttonname)
     {
         Serial.print(buttonname);
         Serial.println(" released");
+    }
+}
+
+// void updateAnimation()
+// {
+//     if (animation == "upDown")
+//     {
+
+
+//     }
+// }
+void updateAnimation()
+{
+    if (animation == "upDown")
+    {
+        int displayHeight = screen_height / 2; // Central vertical position
+        int movementRange = 10;                // Range of movement above and below the central position
+
+        // Update the Y position of the animation based on the direction
+        if (animationDirection == 1)
+        {
+            animationY += 1; // Move the text up
+            if (animationY >= movementRange)
+            {
+                animationDirection = -1; // Change direction to down
+            }
+        }
+        else
+        {
+            animationY -= 1; // Move the text down
+            if (animationY <= -movementRange)
+            {
+                animationDirection = 1; // Change direction to up
+            }
+        }
+
+        // Clear the exact previous position of the text to avoid flickering
+        int16_t x1, y1;
+        uint16_t w, h;
+        tft.getTextBounds(name, screen_width / 2, displayHeight + animationY - animationDirection, &x1, &y1, &w, &h);
+        tft.fillRect(x1, y1, w, h, TFT_BLACK); // Clear only the area where the text was
+
+        // Redisplay the text at the new position
+        displayCenteredText(name, screen_width / 2, displayHeight + animationY, 4, true);
+    }
+    if (animation == "invert"){
+        // Invert the colors of the screen
+        // use animationSpeed to control the speed of the animation
+        // animationSpeed = 1 means BLACK every 100ms AND WHITE every 100ms
+        // dont block with big delays
+        if (millis() % 1000 < 500)
+        {
+            // tft.fillScreen(TFT_BLACK);
+        tft.invertDisplay(true);
+        }
+        else
+        {
+            // tft.fillScreen(TFT_WHITE);
+        tft.invertDisplay(false);
+        }
+        // tft.invertDisplay(true);
+        // delay(1000);
+        // tft.invertDisplay(false);
+        // delay(1000);
     }
 }
 
@@ -374,18 +452,23 @@ void loop()
 
     if (state == "setup")
     {
-        handleJoystick();
-        checkButton(&button_A, "A");
-        checkButton(&button_B, "B");
-        checkButton(&button_X, "X");
-        checkButton(&button_Y, "Y");
-        checkButton(&button_MENU, "MENU");
-        checkButton(&button_START, "START");
-    }
+        if (millis() % stability_delay == 0)
+        {
+            handleJoystick();
+            checkButton(&button_A, "A");
+            checkButton(&button_B, "B");
+            checkButton(&button_X, "X");
+            checkButton(&button_Y, "Y");
+            checkButton(&button_MENU, "MENU");
+            checkButton(&button_START, "START");
+            }
+        }
     else if (state == "nametag")
     {
-        checkButton(&button_MENU, "MENU");
-    }
+        if (millis() % stability_delay == 0)
+        {
+            checkButton(&button_MENU, "MENU");
+        }
 
     // Print debug info every 5 seconds
     if (currentTime - lastDebugTime > 5000)
@@ -396,5 +479,7 @@ void loop()
         lastDebugTime = currentTime;
     }
 
-    delay(100); // Adjust delay for responsiveness
+            updateAnimation();
+        }
+    // delay(100); // Adjust delay for responsiveness
 }
