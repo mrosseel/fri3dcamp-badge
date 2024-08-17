@@ -3,6 +3,9 @@
 #include <Adafruit_GFX.h> // Core graphics library
 #include <SPI.h>
 #include "Adafruit_ST7789_Fri3d2024.h" // Hardware-specific library for ST7789 driver
+#include <Preferences.h>
+
+Preferences preferences;
 
 // Joystick pins
 #define PIN_JOY_X 1
@@ -125,11 +128,43 @@ void displayText(String text)
 
 void nameTag(String text)
 {
+    Serial.println("Entering nameTag function");
+
+    if (text.length() > 0)
+    {
+        Serial.println("Attempting to open preferences");
+        if (preferences.begin("nametag-app", false))
+        {
+            Serial.println("Preferences opened successfully");
+            Serial.println("Saving name to NVS");
+            size_t written = preferences.putString("username", text);
+            if (written == text.length())
+            {
+                Serial.println("Name saved successfully");
+            }
+            else
+            {
+                Serial.println("Failed to save name. Bytes written: " + String(written));
+            }
+            preferences.end();
+            Serial.println("Preferences closed");
+        }
+        else
+        {
+            Serial.println("Failed to open preferences for writing");
+        }
+    }
+    else
+    {
+        Serial.println("Not saving empty name to NVS");
+    }
+
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    displayCenteredText(text, screen_width / 2, screen_height / 2, 4, true); // Display text centered at (x, y) with size 2
-}
+    displayCenteredText(text, screen_width / 2, screen_height / 2, 4, true);
 
+    Serial.println("Exiting nameTag function");
+}
 void drawLetter(int x, int y, char letter, int color = TFT_WHITE)
 {
     int posX = x * cellWidth + (screen_width / 2 - keyboardWidth / 2);
@@ -269,23 +304,74 @@ void checkButton(Button *b, const char *buttonname)
 void setup()
 {
     Serial.begin(115200);
+    delay(2000);
+    Serial.println("Initializing...");
+
+    // Initialize hardware
     button_A.begin();
     button_B.begin();
     button_X.begin();
     button_Y.begin();
     button_MENU.begin();
     button_START.begin();
+
     spi->begin(TFT_SCLK, TFT_MISO, TFT_MOSI, TFT_CS);
     tft.init(TFT_WIDTH, TFT_HEIGHT);
     tft.setRotation(3);
     tft.fillScreen(TFT_BLACK);
+
+    Serial.println("Display and buttons initialized.");
+
+    // Initialize NVS
+    Serial.println("Attempting to initialize NVS...");
+    if (preferences.begin("nametag-app", true))
+    { // Open in read-only mode
+        Serial.println("NVS initialized successfully");
+
+        String storedName = preferences.getString("username", "");
+        Serial.print("Stored name length: ");
+        Serial.println(storedName.length());
+
+        if (storedName.length() == 0)
+        {
+            Serial.println("No name stored. Starting setup.");
+            state = "setup";
+            name = "";
+        }
+        else
+        {
+            Serial.print("Stored name: ");
+            Serial.println(storedName);
+            state = "nametag";
+            name = storedName;
+        }
+
+        preferences.end();
+        Serial.println("NVS closed after reading");
+    }
+    else
+    {
+        Serial.println("Failed to initialize preferences");
+        state = "setup";
+        name = "";
+    }
+
     drawGrid();
     highlightCursor(cursorX, cursorY);
-}
 
+    if (state == "nametag")
+    {
+        Serial.println("Displaying name tag...");
+        nameTag(name);
+    }
+
+    Serial.println("Setup completed successfully");
+}
 void loop()
 {
-    // handleButtonA();
+    static unsigned long lastDebugTime = 0;
+    unsigned long currentTime = millis();
+
     if (state == "setup")
     {
         handleJoystick();
@@ -296,10 +382,19 @@ void loop()
         checkButton(&button_MENU, "MENU");
         checkButton(&button_START, "START");
     }
-    if (state == "nametag")
+    else if (state == "nametag")
     {
         checkButton(&button_MENU, "MENU");
     }
+
+    // Print debug info every 5 seconds
+    if (currentTime - lastDebugTime > 5000)
+    {
+        Serial.println("Current state: " + state);
+        Serial.println("Current name: " + name);
+        Serial.println("Free heap: " + String(ESP.getFreeHeap()));
+        lastDebugTime = currentTime;
+    }
+
     delay(100); // Adjust delay for responsiveness
 }
-
