@@ -59,8 +59,7 @@ void displayCenteredText(String text, int centerX, int centerY, int textSize, bo
         int16_t x1, y1;
         uint16_t w, h;
         uint8_t font_size = 1;
-        int16_t max_width = tft.width() - 20; // Leave a 10-pixel margin on each side
-
+        int16_t max_width = screen_width;
         do
         {
             tft.setTextSize(font_size);
@@ -69,7 +68,7 @@ void displayCenteredText(String text, int centerX, int centerY, int textSize, bo
         } while (w < max_width && h < tft.height() - 20); // Also check height to avoid overflow
         // Step back one size to ensure it fits
         font_size -= 2;
-        tft.setTextSize(font_size);
+        textSize = font_size;
     }
     tft.setTextSize(textSize);
 
@@ -128,7 +127,7 @@ void nameTag(String text)
 {
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    displayCenteredText(text, screen_width / 2, screen_height / 2, 4); // Display text centered at (x, y) with size 2
+    displayCenteredText(text, screen_width / 2, screen_height / 2, 4, true); // Display text centered at (x, y) with size 2
 }
 
 void drawLetter(int x, int y, char letter, int color = TFT_WHITE)
