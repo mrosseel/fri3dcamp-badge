@@ -357,8 +357,8 @@ void updateAnimation()
             int16_t x1, y1;
             uint16_t w, h;
             tft.getTextBounds(name, screen_width / 2, displayHeight + animationY - animationDirection, &x1, &y1, &w, &h);
-            tft.fillRect(0, 0, screen_width, screen_height, TFT_BLACK); // Clear only the area where the text was
-
+            // tft.fillRect(0, 0, screen_width, screen_height, TFT_BLACK); // Clear only the area where the text was
+tft.fillScreen(TFT_BLACK);
             // Redisplay the text at the new position
             displayCenteredText(name, screen_width / 2, displayHeight + animationY, 4, false,true);
         }
@@ -485,7 +485,7 @@ void loop()
         lastDebugTime = currentTime;
     }
 
-            updateAnimation();
+            // updateAnimation();
         }
     // delay(100); // Adjust delay for responsiveness
 }
