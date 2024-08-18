@@ -56,12 +56,13 @@ int keyboardWidth = cols * cellWidth;
 boolean joystick_engaged_x = false;
 boolean joystick_engaged_y = false;
 // Animation
-String animation = "invert"; // "upDown" or "invert"
+// String animation = "invert"; // "upDown" or "invert"
+String animation = "upDown"; // "upDown" or "invert"
 int animationY = 0;
 int animationDirection = 1;
 int animationSpeed = 1;
 
-void displayCenteredText(String text, int centerX, int centerY, int textSize, boolean maxSize = false)
+void displayCenteredText(String text, int centerX, int centerY, int textSize, boolean removeBackground = false, boolean maxSize = false, int color = TFT_WHITE)
 {
     if (maxSize)
     {
@@ -111,7 +112,9 @@ void displayCenteredText(String text, int centerX, int centerY, int textSize, bo
     Serial.println(centerY);
 
     // Set the cursor to the calculated position
-    tft.fillRect(0, startY, screen_width, h, TFT_BLACK); // Clear the previous text
+    if (removeBackground){
+        tft.fillRect(0, startY, screen_width, h, TFT_BLACK); // Clear the previous text
+    }
     tft.setCursor(startX, startY);
     tft.print(text);
 }
@@ -132,7 +135,7 @@ void displayText(String text)
 
     // height  reres
     // displayCenteredText(text, screen_width / 2, screen_height / 4, 3); // Display text centered at (x, y) with size 2
-    displayCenteredText(text, screen_width / 2, 20, 3); // Display text centered at (x, y) with size 2
+    displayCenteredText(text, screen_width / 2, 20, 3, true); // Display text centered at (x, y) with size 2
 }
 
 void nameTag(String text)
@@ -170,7 +173,7 @@ void nameTag(String text)
 
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    displayCenteredText(text, screen_width / 2, screen_height / 2, 4, true);
+    displayCenteredText(text, screen_width / 2, screen_height / 2, 4, false, true);
 
     Serial.println("Exiting nameTag function");
 }
@@ -327,36 +330,39 @@ void updateAnimation()
 {
     if (animation == "upDown")
     {
-        int displayHeight = screen_height / 2; // Central vertical position
-        int movementRange = 10;                // Range of movement above and below the central position
-
-        // Update the Y position of the animation based on the direction
-        if (animationDirection == 1)
+        if (millis() % 100 < 50)
         {
-            animationY += 1; // Move the text up
-            if (animationY >= movementRange)
-            {
-                animationDirection = -1; // Change direction to down
-            }
-        }
-        else
-        {
-            animationY -= 1; // Move the text down
-            if (animationY <= -movementRange)
-            {
-                animationDirection = 1; // Change direction to up
-            }
-        }
+            int displayHeight = screen_height / 2; // Central vertical position
+            int movementRange = 10;                // Range of movement above and below the central position
 
-        // Clear the exact previous position of the text to avoid flickering
-        int16_t x1, y1;
-        uint16_t w, h;
-        tft.getTextBounds(name, screen_width / 2, displayHeight + animationY - animationDirection, &x1, &y1, &w, &h);
-        tft.fillRect(x1, y1, w, h, TFT_BLACK); // Clear only the area where the text was
+            // Update the Y position of the animation based on the direction
+            if (animationDirection == 1)
+            {
+                animationY += 1; // Move the text up
+                if (animationY >= movementRange)
+                {
+                    animationDirection = -1; // Change direction to down
+                }
+            }
+            else
+            {
+                animationY -= 1; // Move the text down
+                if (animationY <= -movementRange)
+                {
+                    animationDirection = 1; // Change direction to up
+                }
+            }
 
-        // Redisplay the text at the new position
-        displayCenteredText(name, screen_width / 2, displayHeight + animationY, 4, true);
-    }
+            // Clear the exact previous position of the text to avoid flickering
+            int16_t x1, y1;
+            uint16_t w, h;
+            tft.getTextBounds(name, screen_width / 2, displayHeight + animationY - animationDirection, &x1, &y1, &w, &h);
+            tft.fillRect(0, 0, screen_width, screen_height, TFT_BLACK); // Clear only the area where the text was
+
+            // Redisplay the text at the new position
+            displayCenteredText(name, screen_width / 2, displayHeight + animationY, 4, false,true);
+        }
+        }
     if (animation == "invert"){
         // Invert the colors of the screen
         // use animationSpeed to control the speed of the animation
